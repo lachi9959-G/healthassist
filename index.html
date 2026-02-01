@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthAssist AI - Your 24/7 Medical Assistant</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" id="manifest-placeholder">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Driver.js for Onboarding Tour -->
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
+
+    <!-- Jitsi Meet API for Video Calls -->
+    <script src='https://meet.jit.si/external_api.js'></script>
+
+    <!-- Custom Config for Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        darkbg: '#0f172a',
+                        darkcard: '#1e293b'
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .dark .glass-effect { 
+            background: rgba(15, 23, 42, 0.9); 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Chat Bubbles */
+        .chat-bubble {
+            position: relative; max-width: 85%; padding: 14px 18px; border-radius: 18px;
+            margin-bottom: 12px; line-height: 1.6; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .chat-user { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+        .chat-ai { background-color: #f1f5f9; color: #334155; margin-right: auto; border-bottom-left-radius: 4px; border: 1px solid #e2e8f0; }
+        .dark .chat-ai { background-color: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+        
+        /* SOS Animation */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .sos-btn { animation: pulse-red 2s infinite; }
+
+        .fa-card:hover { transform: translateY(-5px); }
+
+        /* Mic Pulse */
+        .mic-active { animation: pulse-red 1.5s infinite; background-color: #fee2e2 !important; color: #ef4444 !important; }
+
+        /* File Upload Styling */
+        .file-upload-box {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .file-upload-box:hover {
+            border-color: #0ea5e9;
+            background-color: rgba(14, 165, 233, 0.05);
+        }
+
+        /* New Styles for Triage & Modal */
+        .triage-high { border-left: 5px solid #ef4444; background: #fef2f2; }
+        .triage-med { border-left: 5px solid #eab308; background: #fefce8; }
+        .triage-low { border-left: 5px solid #22c55e; background: #f0fdf4; }
+        
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 transition-colors duration-300 dark:bg-darkbg dark:text-gray-100 font-sans">
+
+    <!-- CONSENT MODAL -->
+    <div id="consentModal" class="fixed inset-0 z-[100] modal-overlay hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-darkcard max-w-lg w-full rounded-2xl shadow-2xl p-6 border border-gray-200 dark:border-gray-700 transform scale-100 transition-transform">
+            <div class="text-center mb-6">
+                <div class="bg-blue-100 dark:bg-blue-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 dark:text-blue-300">
+                    <i class="fa-solid fa-shield-halved text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">Welcome to HealthAssist AI</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Your privacy and safety are our priority.</p>
+            </div>
+            
+            <div class="space-y-4 text-sm mb-6 max-h-60 overflow-y-auto border p-3 rounded bg-gray-50 dark:bg-slate-800 dark:border-gray-700">
+                <p><strong>1. Not a Doctor:</strong> This AI is for informational purposes only. In emergencies, call 112/108.</p>
+                <p><strong>2. Data Privacy:</strong> We use local encryption. You can choose to store chat history locally or browse anonymously.</p>
+                <p><strong>3. Consent:</strong> By continuing, you agree to our Terms of Service.</p>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="acceptConsent(false)" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">Incognito Mode</button>
+                <button onclick="acceptConsent(true)" class="flex-1 px-4 py-2 bg-medical-600 text-white rounded-lg hover:bg-medical-700 transition shadow-lg">I Agree</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATED: TELEMEDICINE MODAL (UI FIX) -->
+    <div id="telemedModal" class="fixed inset-0 z-[90] modal-overlay hidden flex items-center justify-center p-4">
+        <!-- Changed h-[80vh] to h-auto max-h-[90vh] to allow fitting content better -->
+        <div class="bg-white dark:bg-darkcard max-w-5xl w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col h-[85vh]">
+            
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-slate-800 flex-shrink-0">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-video text-indigo-500 mr-2"></i> Telemed Consultation</h3>
+                <button onclick="toggleTelemed(false)" class="text-gray-500 hover:text-red-500 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <!-- Lobby View (Added overflow-y-auto to fix clipping) -->
+            <div id="telemedLobby" class="flex-1 flex flex-col items-center justify-center p-4 text-center space-y-4 overflow-y-auto">
+                <div class="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-300">
+                    <i class="fa-solid fa-user-doctor text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold">Start Video Session</h2>
+                <p class="text-gray-500 dark:text-gray-400 max-w-md text-sm">Enter a unique code to join an existing consultation, or create a new one to invite a patient/doctor.</p>
+                
+                <div class="w-full max-w-sm space-y-3 pt-2">
+                    <div class="text-left">
+                        <label class="text-xs font-bold text-gray-500 ml-1">Display Name</label>
+                        <input type="text" id="teleName" placeholder="e.g. Dr. Smith / John Doe" class="w-full p-3 border rounded-lg dark:bg-slate-800 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div class="relative text-left">
+                        <label class="text-xs font-bold text-gray-500 ml-1">Room Code</label>
+                        <div class="relative">
+                            <input type="text" id="teleRoomCode" placeholder="e.g. HV8S9S" class="w-full p-3 border rounded-lg dark:bg-slate-800 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-widest text-center uppercase text-lg">
+                            <button onclick="generateRoomCode()" class="absolute right-2 top-2 text-xs bg-gray-200 dark:bg-gray-700 px-3 py-2 rounded hover:bg-gray-300 transition font-bold" title="Generate Random Code">Gen</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-4 pb-2">
+                        <button onclick="startVideoCall('join')" class="py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-lg transition transform hover:scale-105">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i> Join
+                        </button>
+                        <button onclick="startVideoCall('create')" class="py-3 bg-white dark:bg-slate-700 border border-indigo-200 dark:border-gray-600 text-indigo-600 dark:text-indigo-300 rounded-lg font-bold hover:bg-indigo-50 dark:hover:bg-gray-600 transition">
+                            <i class="fa-solid fa-plus mr-2"></i> Create
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Container (Jitsi loads here) -->
+            <div id="telemedVideoArea" class="hidden flex-1 w-full bg-black relative">
+                <div id="jitsi-container" class="w-full h-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-effect">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <div class="bg-medical-500 rounded-lg p-1.5 text-white">
+                        <i class="fa-solid fa-heart-pulse text-xl"></i>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight">HealthAssist <span class="text-medical-500">AI</span></span>
+                </div>
+                
+                <div class="hidden md:flex space-x-8 text-sm font-medium">
+                    <a href="#home" class="hover:text-medical-500 transition" data-translate="nav_home">Home</a>
+                    <a href="#diagnosis" class="hover:text-medical-500 transition" data-translate="nav_diagnosis">Diagnosis</a>
+                    <a href="#tools" class="hover:text-medical-500 transition" data-translate="nav_tools">Tools</a>
+                    <!-- CheatSheet is explicitly preserved here -->
+                    <a href="#cheatsheet" class="hover:text-medical-500 transition" data-translate="nav_sheet">CheatSheet</a>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Improved Language Selector UI/UX -->
+                    <div class="relative hidden sm:inline-block text-left">
+                        <div class="flex items-center bg-white dark:bg-slate-700 rounded-full px-3 py-1.5 border border-gray-200 dark:border-gray-600 shadow-sm transition hover:border-medical-400">
+                            <i class="fa-solid fa-earth-americas text-medical-500 mr-2"></i>
+                            <select id="langSelect" onchange="changeLanguage()" class="bg-transparent text-sm outline-none appearance-none pr-6 cursor-pointer text-gray-700 dark:text-gray-200 font-medium">
+                                <option value="en">English</option>
+                                <option value="hi">Hindi</option>
+                                <option value="te">Telugu</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 absolute right-3 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300">
+                        <i class="fa-solid fa-moon dark:hidden"></i>
+                        <i class="fa-solid fa-sun hidden dark:inline text-yellow-400"></i>
+                    </button>
+                    
+                    <!-- Telegram Link -->
+                    <a href="https://t.me/Lachi9959_bot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white w-9 h-9 flex items-center justify-center rounded-full transition shadow-lg hover:shadow-blue-500/30" title="Chat on Telegram">
+                        <i class="fa-brands fa-telegram text-lg"></i>
+                    </a>
+
+                    <!-- WhatsApp Link -->
+                    <a href="https://health-assist-ai.base44.app" target="_blank" class="bg-green-500 hover:bg-green-600 text-white w-9 h-9 flex items-center justify-center rounded-full transition shadow-lg hover:shadow-green-500/30">
+                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- LIVE METRICS DASHBOARD -->
+    <div class="fixed top-20 right-4 z-40 hidden lg:block">
+        <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 text-xs w-48">
+            <h4 class="font-bold border-b dark:border-gray-600 pb-1 mb-2">Live Demo Metrics</h4>
+            <div class="flex justify-between mb-1"><span>System Status:</span> <span class="text-green-500 font-bold">Online</span></div>
+            <div class="flex justify-between mb-1"><span>Requests:</span> <span id="reqCount">1,204</span></div>
+            <div class="flex justify-between"><span>Avg Latency:</span> <span class="text-blue-500">0.8s</span></div>
+            <div id="offlineIndicator" class="hidden mt-2 bg-red-100 text-red-600 p-1 rounded text-center font-bold">OFFLINE MODE</div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section id="home" class="pt-32 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-white dark:from-darkbg dark:to-slate-900 overflow-hidden">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div class="z-10">
+                <div class="inline-flex items-center px-3 py-1 mb-6 bg-white dark:bg-slate-800 border border-medical-100 dark:border-slate-700 rounded-full text-xs font-semibold text-medical-600 dark:text-medical-400 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                    #1 AI Health Companion in India
+                </div>
+                <h1 class="text-4xl md:text-6xl font-extrabold leading-tight mb-6 tracking-tight">
+                    <span data-translate="hero_title1">Your Health, Simplified by</span> 
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-medical-500 to-blue-600">Intelligence</span>
+                </h1>
+                <p class="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-lg leading-relaxed" data-translate="hero_desc">
+                    Instant diagnosis, food safety checks, and Pan-India hospital bookings. Professional medical guidance powered by advanced AI.
+                </p>
+                
+                <div class="flex flex-wrap gap-4">
+                    <a href="#diagnosis" class="bg-medical-600 hover:bg-medical-700 text-white px-8 py-3.5 rounded-full font-semibold shadow-lg shadow-medical-500/30 transition transform hover:-translate-y-1 hover:scale-105" data-translate="btn_start">Start Diagnosis</a>
+                    <button onclick="locateHospital()" class="bg-white dark:bg-darkcard border border-gray-200 dark:border-gray-700 hover:border-red-400 text-gray-700 dark:text-gray-200 px-8 py-3.5 rounded-full font-semibold shadow-sm transition flex items-center gap-2 group">
+                        <i class="fa-solid fa-location-dot text-red-500 group-hover:animate-bounce"></i> <span data-translate="btn_emergency">Find Hospital</span>
+                    </button>
+                </div>
+            </div>
+            <div class="relative">
+                <div class="absolute top-0 right-0 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+                <div class="absolute bottom-0 left-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+                <img src="https://img.freepik.com/free-vector/online-doctor-concept-illustration_114360-1831.jpg" alt="AI Doctor" class="relative rounded-3xl shadow-2xl border-4 border-white dark:border-gray-700 mx-auto w-full max-w-md transform hover:scale-[1.02] transition duration-500 z-10">
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW SECTION: Health Benefits Visuals -->
+    <section class="py-8 bg-white dark:bg-darkbg border-b border-gray-100 dark:border-gray-800">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex items-center p-4 bg-blue-50 dark:bg-slate-800/50 rounded-xl border border-blue-100 dark:border-slate-700 shadow-sm animate-float">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-4 text-xl"><i class="fa-solid fa-glass-water"></i></div>
+                    <div><h4 class="font-bold text-gray-800 dark:text-white">Stay Hydrated</h4><p class="text-xs text-gray-500">Boosts immunity & energy.</p></div>
+                </div>
+                <div class="flex items-center p-4 bg-purple-50 dark:bg-slate-800/50 rounded-xl border border-purple-100 dark:border-slate-700 shadow-sm animate-float-delayed">
+                    <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-4 text-xl"><i class="fa-solid fa-bed"></i></div>
+                    <div><h4 class="font-bold text-gray-800 dark:text-white">Sleep Well</h4><p class="text-xs text-gray-500">Repairs body & mind.</p></div>
+                </div>
+                <div class="flex items-center p-4 bg-green-50 dark:bg-slate-800/50 rounded-xl border border-green-100 dark:border-slate-700 shadow-sm animate-float">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-4 text-xl"><i class="fa-solid fa-person-running"></i></div>
+                    <div><h4 class="font-bold text-gray-800 dark:text-white">Active Life</h4><p class="text-xs text-gray-500">30 mins daily exercise.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Diagnosis Section -->
+    <section id="diagnosis" class="py-16 bg-gray-50 dark:bg-darkbg">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold mb-2 text-gray-800 dark:text-white" data-translate="diag_title">AI Medical Diagnosis</h2>
+                <p class="text-gray-500 text-sm" data-translate="diag_subtitle">Describe your symptoms. I will analyze possible conditions and medicines.</p>
+                <!-- Privacy Toggle -->
+                <div class="mt-4 flex justify-center items-center gap-2 text-xs">
+                    <span class="text-gray-500"><i class="fa-solid fa-lock"></i> Encryption:</span>
+                    <button onclick="toggleEncryption()" id="encryptBtn" class="text-red-500 font-bold hover:underline">OFF</button>
+                    <span id="pinStatus" class="hidden text-green-500 ml-2"><i class="fa-solid fa-check"></i> PIN Set</span>
+                </div>
+            </div>
+
+            <!-- Chat Box -->
+            <div class="bg-white dark:bg-darkcard rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-[520px] max-w-3xl mx-auto relative">
+                
+                <div class="bg-gradient-to-r from-medical-500 to-medical-600 p-3 flex items-center justify-between text-white shadow-md z-10">
+                    <div class="flex items-center gap-2">
+                        <div class="bg-white/20 p-1.5 rounded-full"><i class="fa-solid fa-robot"></i></div>
+                        <div>
+                            <p class="text-sm font-bold leading-none">HealthAssist Bot</p>
+                            <p class="text-[10px] opacity-80 leading-none mt-0.5">Always Online • AI Powered</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <!-- Voice Toggle Button (New) -->
+                        <button onclick="toggleVoice()" id="voiceToggleBtn" class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition text-green-300" title="Voice Output On">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </button>
+                        <!-- Export Button -->
+                        <button onclick="downloadChat()" class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition" title="Download Report"><i class="fa-solid fa-download"></i></button>
+                        <button onclick="document.getElementById('chatContainer').innerHTML=''" class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Clear</button>
+                    </div>
+                </div>
+
+                <!-- ADDED DISCLAIMER IN CHAT BOARD -->
+                <div class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-[10px] px-4 py-1.5 text-center font-medium border-b border-yellow-200 dark:border-yellow-900/50">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Disclaimer: I am not a doctor. For emergencies call local services.
+                </div>
+
+                <div id="chatContainer" class="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50 dark:bg-[#1a2332]">
+                    <div class="chat-bubble chat-ai">
+                        <p data-translate="chat_welcome">Hello! I am HealthAssist AI. Please enter your <b>Age</b> below and describe your symptoms.</p>
+                    </div>
+                </div>
+                
+                <div id="typingIndicator" class="hidden px-6 py-2 text-xs text-medical-600 dark:text-medical-400 bg-slate-50 dark:bg-[#1a2332]">
+                    <span class="inline-flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-medical-500 rounded-full animate-bounce"></span>
+                        <span class="w-1.5 h-1.5 bg-medical-500 rounded-full animate-bounce delay-100"></span>
+                        <span class="w-1.5 h-1.5 bg-medical-500 rounded-full animate-bounce delay-200"></span>
+                        Checking medical database...
+                    </span>
+                </div>
+
+                <div class="p-3 bg-white dark:bg-darkcard border-t border-gray-100 dark:border-gray-700">
+                    <form onsubmit="event.preventDefault(); sendMessage();" class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-full border border-transparent focus-within:border-medical-300 dark:focus-within:border-medical-700 transition-colors">
+                        <button type="button" id="voiceBtn" class="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:text-medical-600 transition" title="Speak">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <input type="number" id="userAge" class="w-16 bg-white dark:bg-slate-700 rounded-full px-3 py-1 text-sm outline-none border border-gray-200 dark:border-gray-600 focus:border-medical-500" placeholder="Age" min="1" max="120" required>
+                        <input type="text" id="userInput" class="flex-1 bg-transparent border-0 text-sm px-2 text-gray-800 dark:text-white outline-none placeholder-gray-400" placeholder="Type symptoms (e.g., headache, fever)..." autocomplete="off" required>
+                        <button type="submit" class="w-9 h-9 rounded-full bg-medical-500 hover:bg-medical-600 text-white flex items-center justify-center shadow-md transition transform hover:scale-105">
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tools Grid -->
+    <section id="tools" class="py-16 bg-white dark:bg-slate-900">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12" data-translate="tools_title">Smart Health Tools</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <!-- NEW ADDITION: AI Medical Analyzer (Vision) -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-blue-500 hover:shadow-2xl transition group relative overflow-hidden">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-robot text-blue-500 mr-2 group-hover:rotate-12 transition"></i> AI Medical Analyzer</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- Switcher -->
+                        <div class="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
+                            <button onclick="setMedicalAnalyzerMode('injury')" id="btnMedInjury" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-700 shadow-sm text-blue-600 transition">Injury Analysis</button>
+                            <button onclick="setMedicalAnalyzerMode('rx')" id="btnMedRx" class="flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition">Read Rx</button>
+                        </div>
+
+                        <!-- Image Upload Area -->
+                        <div class="file-upload-box rounded-lg p-4 text-center cursor-pointer relative">
+                            <input type="file" id="medImageInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-400 mb-2"></i>
+                            <p class="text-xs text-gray-500" id="medFileName">Drop photo or Click to Upload</p>
+                        </div>
+
+                        <!-- Age Input -->
+                        <div id="medAnalyzerAgeGroup">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Patient Age</label>
+                            <input type="number" id="medAnalyzerAge" placeholder="e.g. 25" class="w-full p-2 border rounded dark:bg-slate-800 dark:border-gray-600 text-sm focus:ring-1 focus:ring-blue-500 outline-none">
+                        </div>
+
+                        <button onclick="analyzeMedicalImage()" id="medAnalyzeBtn" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2 shadow-md">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i> <span id="medAnalyzeBtnText">Analyze Injury</span>
+                        </button>
+
+                        <div id="medAnalysisResult" class="hidden p-3 bg-blue-50 dark:bg-slate-800 rounded-lg text-xs text-gray-700 dark:text-gray-300 border border-blue-100 dark:border-gray-600 max-h-40 overflow-y-auto">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Food Safety Checker -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-green-500 hover:shadow-2xl transition group relative overflow-hidden">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-utensils text-green-500 mr-2"></i> Food Safety Checker</h3>
+                    
+                    <div class="space-y-4">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Enter a food name to check if it's safe during illness.</p>
+                        
+                        <div class="relative">
+                            <input type="text" id="foodName" placeholder="e.g. Curd Rice, Pizza" class="w-full pl-10 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                            <i class="fa-solid fa-bowl-food absolute left-3 top-3.5 text-gray-400"></i>
+                        </div>
+
+                        <button onclick="checkFoodSafety()" id="foodBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2 shadow-md">
+                            Check Safety
+                        </button>
+
+                        <!-- Dashboard Result Area -->
+                        <div id="foodResult" class="hidden animate-float">
+                            <div class="bg-gray-50 dark:bg-slate-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+                                <div class="grid grid-cols-2 gap-2 mb-2">
+                                    <div id="coldStatus" class="p-2 rounded bg-white dark:bg-slate-700 text-center shadow-sm">
+                                        <p class="text-[10px] font-bold">Cold/Fever</p>
+                                        <span class="text-xs font-bold" id="coldText">--</span>
+                                    </div>
+                                    <div id="acidityStatus" class="p-2 rounded bg-white dark:bg-slate-700 text-center shadow-sm">
+                                        <p class="text-[10px] font-bold">Acidity</p>
+                                        <span class="text-xs font-bold" id="acidityText">--</span>
+                                    </div>
+                                </div>
+                                <div id="finalVerdict" class="text-center p-2 rounded-lg font-bold text-white text-sm bg-gray-400">
+                                    VERDICT: --
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical Simplifier -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-purple-500 hover:shadow-2xl transition group">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-brain text-purple-500 mr-2"></i> AI Term Simplifier</h3>
+                    <div class="space-y-3">
+                        <p class="text-xs text-gray-500">Does not understand the Doctor's report? Type the complex word below.</p>
+                        <input type="text" id="complexTerm" placeholder="e.g., Myocardial Infarction" class="w-full p-2 border rounded dark:bg-slate-800 dark:border-gray-600 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
+                        <button onclick="simplifyTermWithAI()" id="simplifyBtn" class="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition shadow-md">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Simplify
+                        </button>
+                        <div id="simpleOutput" class="p-3 bg-purple-50 dark:bg-slate-800 rounded min-h-[60px] text-sm italic text-gray-700 dark:text-gray-300 border border-purple-100 dark:border-gray-600"></div>
+                    </div>
+                </div>
+
+                <!-- First Aid Guide -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-red-500 hover:shadow-2xl transition lg:col-span-1">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-briefcase-medical text-red-500 mr-2"></i> Quick First Aid</h3>
+                    
+                    <!-- Icon Grid -->
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <button onclick="showFirstAid('burns')" class="fa-card flex flex-col items-center justify-center p-2 bg-red-50 dark:bg-gray-700 rounded-lg hover:bg-red-100 transition border border-transparent hover:border-red-200">
+                            <i class="fa-solid fa-fire text-orange-500 mb-1"></i><span class="text-[10px] font-bold">Burns</span>
+                        </button>
+                        <button onclick="showFirstAid('cuts')" class="fa-card flex flex-col items-center justify-center p-2 bg-red-50 dark:bg-gray-700 rounded-lg hover:bg-red-100 transition border border-transparent hover:border-red-200">
+                            <i class="fa-solid fa-band-aid text-blue-500 mb-1"></i><span class="text-[10px] font-bold">Cuts</span>
+                        </button>
+                        <button onclick="showFirstAid('faint')" class="fa-card flex flex-col items-center justify-center p-2 bg-red-50 dark:bg-gray-700 rounded-lg hover:bg-red-100 transition border border-transparent hover:border-red-200">
+                            <i class="fa-solid fa-person-falling text-purple-500 mb-1"></i><span class="text-[10px] font-bold">Faint</span>
+                        </button>
+                        <button onclick="showFirstAid('choke')" class="fa-card flex flex-col items-center justify-center p-2 bg-red-50 dark:bg-gray-700 rounded-lg hover:bg-red-100 transition border border-transparent hover:border-red-200">
+                            <i class="fa-solid fa-hands-holding-circle text-green-500 mb-1"></i><span class="text-[10px] font-bold">Choke</span>
+                        </button>
+                    </div>
+
+                    <div id="firstAidContent" class="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 p-3 rounded h-32 overflow-y-auto border border-gray-200 dark:border-gray-600">
+                        <p class="text-center mt-8 text-gray-400">Select an icon above to see emergency steps.</p>
+                    </div>
+                </div>
+
+                <!-- NEW: SMART BMI CALCULATOR (Filling the empty space) -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-yellow-400 hover:shadow-2xl transition group relative overflow-hidden">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-weight-scale text-yellow-400 mr-2"></i> Smart BMI & Health</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex gap-2">
+                            <input type="number" id="bmiWeight" placeholder="Weight (kg)" class="w-1/2 p-2.5 border rounded-lg dark:bg-slate-800 dark:border-gray-600 text-sm focus:ring-1 focus:ring-yellow-400 outline-none">
+                            <input type="number" id="bmiHeight" placeholder="Height (cm)" class="w-1/2 p-2.5 border rounded-lg dark:bg-slate-800 dark:border-gray-600 text-sm focus:ring-1 focus:ring-yellow-400 outline-none">
+                        </div>
+
+                        <button onclick="calculateBMI()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2 shadow-md">
+                            Calculate & Advise
+                        </button>
+
+                        <div id="bmiResult" class="hidden p-3 bg-yellow-50 dark:bg-slate-800 rounded-lg border border-yellow-200 dark:border-gray-600 text-center">
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white" id="bmiScore">--</p>
+                            <p class="text-sm font-semibold mb-2" id="bmiCategory">--</p>
+                            <p class="text-xs text-gray-500 italic" id="bmiAdvice">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: MENTAL WELLNESS AI (The 6th Item) -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-teal-500 hover:shadow-2xl transition group relative overflow-hidden">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-head-side-virus text-teal-500 mr-2"></i> Mental Wellness</h3>
+                    <div class="space-y-4">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Feeling stressed or anxious? Talk to AI.</p>
+                        <textarea id="mentalInput" rows="2" class="w-full p-3 bg-gray-50 dark:bg-slate-800 border dark:border-gray-600 rounded-lg text-sm outline-none focus:ring-1 focus:ring-teal-500" placeholder="I feel overwhelmed..."></textarea>
+                        <button onclick="checkMentalHealth()" id="mentalBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-semibold shadow-md transition">Get Support</button>
+                        <div id="mentalResult" class="hidden p-3 bg-teal-50 dark:bg-slate-800 rounded-lg text-xs italic text-gray-700 dark:text-gray-300 border border-teal-100 dark:border-gray-600 max-h-32 overflow-y-auto"></div>
+                    </div>
+                </div>
+                
+                <!-- NEW: Telemedicine Lite -->
+                <div class="bg-white dark:bg-darkcard p-6 rounded-xl shadow-lg border-t-4 border-indigo-500 hover:shadow-2xl transition group relative overflow-hidden">
+                    <h3 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-video text-indigo-500 mr-2"></i> Telemed Consult</h3>
+                    <p class="text-xs text-gray-500 mb-4">Connect remotely with patients or doctors safely.</p>
+                    <button onclick="toggleTelemed(true)" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition">Start Video Call</button>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Health CheatSheet Section -->
+    <section id="cheatsheet" class="py-16 bg-gray-50 dark:bg-darkbg">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12">Health Vitals CheatSheet</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                <!-- Normal Range Table -->
+                <div class="overflow-x-auto rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-darkcard">
+                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                        <thead class="text-xs text-gray-700 uppercase bg-medical-50 dark:bg-gray-800 dark:text-gray-400">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">Vital Sign</th>
+                                <th scope="col" class="px-6 py-3">Normal Range (Adults)</th>
+                                <th scope="col" class="px-6 py-3">Unit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bg-white border-b dark:bg-darkcard dark:border-gray-700">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><i class="fa-solid fa-droplet text-red-500 mr-2"></i>Blood Pressure</td><td class="px-6 py-4">90/60 to 120/80</td><td class="px-6 py-4">mmHg</td>
+                            </tr>
+                            <tr class="bg-gray-50 border-b dark:bg-slate-800 dark:border-gray-700">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><i class="fa-solid fa-heart-pulse text-pink-500 mr-2"></i>Heart Rate</td><td class="px-6 py-4">60 to 100</td><td class="px-6 py-4">BPM</td>
+                            </tr>
+                            <tr class="bg-white border-b dark:bg-darkcard dark:border-gray-700">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><i class="fa-solid fa-cube text-yellow-500 mr-2"></i>Blood Sugar (Fasting)</td><td class="px-6 py-4">70 to 99</td><td class="px-6 py-4">mg/dL</td>
+                            </tr>
+                            <tr class="bg-gray-50 border-b dark:bg-slate-800 dark:border-gray-700">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><i class="fa-solid fa-temperature-three-quarters text-orange-500 mr-2"></i>Body Temp</td><td class="px-6 py-4">97.8 to 99.1</td><td class="px-6 py-4">°F</td>
+                            </tr>
+                            <tr class="bg-white border-b dark:bg-darkcard dark:border-gray-700">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><i class="fa-solid fa-lungs text-blue-400 mr-2"></i>Respiratory Rate</td><td class="px-6 py-4">12 to 20</td><td class="px-6 py-4">Breaths/min</td>
+                            </tr>
+                            <tr class="bg-gray-50 dark:bg-slate-800">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><i class="fa-solid fa-percent text-blue-600 mr-2"></i>Oxygen (SpO2)</td><td class="px-6 py-4">95 to 100</td><td class="px-6 py-4">%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Visual Guide -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-darkcard p-4 rounded-xl shadow hover:shadow-lg transition transform hover:-translate-y-1">
+                        <img src="https://img.freepik.com/free-vector/blood-pressure-monitor-illustration_1284-18118.jpg" alt="BP Monitor" class="w-full h-32 object-cover rounded-lg mb-2 opacity-90 hover:opacity-100 transition">
+                        <h4 class="font-bold text-center">Monitor BP</h4>
+                        <p class="text-xs text-center text-gray-500">Check regularly to prevent hypertension.</p>
+                    </div>
+                    <div class="bg-white dark:bg-darkcard p-4 rounded-xl shadow hover:shadow-lg transition transform hover:-translate-y-1">
+                        <img src="https://img.freepik.com/free-vector/flat-hand-drawn-patient-taking-medical-examination_23-2148859982.jpg" alt="Checkup" class="w-full h-32 object-cover rounded-lg mb-2 opacity-90 hover:opacity-100 transition">
+                        <h4 class="font-bold text-center">Yearly Checkup</h4>
+                        <p class="text-xs text-center text-gray-500">Full body profile once a year.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+                <h3 class="text-white text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-heart-pulse text-medical-500"></i> HealthAssist AI</h3>
+                <p class="text-sm leading-relaxed">Empowering healthcare across India with Artificial Intelligence. Providing 24/7 support for free.</p>
+            </div>
+            <div>
+                <h3 class="text-white text-lg font-bold mb-4">Contact</h3>
+                <p class="text-sm mb-2"><i class="fa-solid fa-envelope mr-2"></i> support@healthassist.ai</p>
+                <p class="text-sm"><i class="fa-solid fa-phone mr-2"></i> +91 91214 72856</p>
+            </div>
+            <div class="col-span-1 md:col-span-2">
+                <p class="text-xs text-gray-600 mt-4">Disclaimer: This AI tool is for informational purposes only and does not replace professional medical advice.</p>
+            </div>
+        </div>
+        <div class="text-center mt-12 border-t border-gray-800 pt-8 text-sm">
+            &copy; 2025 HealthAssist AI. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Floating SOS Button -->
+    <button onclick="locateHospital()" class="fixed bottom-6 right-6 bg-red-600 text-white w-16 h-16 rounded-full shadow-2xl sos-btn flex items-center justify-center z-50 hover:bg-red-700 transition transform hover:scale-110" title="Emergency Locator">
+        <i class="fa-solid fa-truck-medical text-2xl"></i>
+    </button>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- CONFIGURATION ---
+        const GROQ_API_KEY = "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"; 
+
+        // --- PWA MANIFEST INJECTION ---
+        const manifestBlob = new Blob([JSON.stringify({
+            "name": "HealthAssist AI",
+            "short_name": "HealthAI",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#0ea5e9",
+            "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3774/3774299.png", "sizes": "512x512", "type": "image/png"}]
+        })], {type: 'application/manifest+json'});
+        document.getElementById('manifest-placeholder').href = URL.createObjectURL(manifestBlob);
+
+        // --- THEME TOGGLE ---
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        if(localStorage.getItem('theme') === 'dark') html.classList.add('dark');
+
+        // --- 1. VOICE RECOGNITION & TTS ---
+        const voiceBtn = document.getElementById('voiceBtn');
+        const userInput = document.getElementById('userInput');
+        let currentLang = 'en-US';
+        let isTtsEnabled = true;
+
+        function changeLanguage() {
+            const val = document.getElementById('langSelect').value;
+            currentLang = val === 'hi' ? 'hi-IN' : (val === 'te' ? 'te-IN' : 'en-US');
+        }
+
+        // Toggle Voice Function
+        function toggleVoice() {
+            isTtsEnabled = !isTtsEnabled;
+            const btn = document.getElementById('voiceToggleBtn');
+            if(isTtsEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                btn.classList.replace('text-red-300', 'text-green-300');
+                btn.title = "Voice Output On";
+            } else {
+                window.speechSynthesis.cancel(); // Stop current speech
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                btn.classList.replace('text-green-300', 'text-red-300');
+                btn.title = "Voice Output Off";
+            }
+        }
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+
+            voiceBtn.addEventListener('click', () => {
+                recognition.lang = currentLang;
+                try {
+                    recognition.start();
+                    voiceBtn.classList.add('mic-active');
+                } catch (e) {
+                    recognition.stop();
+                    voiceBtn.classList.remove('mic-active');
+                }
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                voiceBtn.classList.remove('mic-active');
+            };
+
+            recognition.onend = () => { voiceBtn.classList.remove('mic-active'); };
+            recognition.onerror = () => { voiceBtn.classList.remove('mic-active'); alert("Microphone access denied."); };
+        } else {
+            voiceBtn.style.display = 'none';
+        }
+
+        function speakResponse(text) {
+            window.speechSynthesis.cancel();
+            if('speechSynthesis' in window && isTtsEnabled) {
+                const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
+                utterance.lang = currentLang;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- 2. AI DIAGNOSIS LOGIC ---
+        const chatContainer = document.getElementById('chatContainer');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const ageInput = document.getElementById('userAge');
+        
+        let msgQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+
+        window.addEventListener('online', () => {
+            document.getElementById('offlineIndicator').classList.add('hidden');
+            if(msgQueue.length > 0) {
+                alert("Back online! Sending queued messages...");
+                msgQueue = [];
+                localStorage.setItem('offlineQueue', '[]');
+            }
+        });
+        window.addEventListener('offline', () => {
+            document.getElementById('offlineIndicator').classList.remove('hidden');
+        });
+
+        const medContraindications = {
+            "aspirin": ["ulcer", "bleeding", "asthma"],
+            "ibuprofen": ["kidney", "ulcer"],
+            "paracetamol": ["liver"]
+        };
+
+        function checkInteractions(aiText, userSx) {
+            let warnings = [];
+            for(let med in medContraindications) {
+                if(aiText.toLowerCase().includes(med)) {
+                    medContraindications[med].forEach(cond => {
+                        if(userSx.toLowerCase().includes(cond)) {
+                            warnings.push(`Warning: ${med} may be unsafe if you have ${cond}.`);
+                        }
+                    });
+                }
+            }
+            return warnings.length ? "<br><br><span class='text-red-500 font-bold'>" + warnings.join("<br>") + "</span>" : "";
+        }
+
+        async function sendMessage() {
+            window.speechSynthesis.cancel();
+
+            const text = userInput.value.trim();
+            const age = ageInput.value.trim();
+            const lang = document.getElementById('langSelect').value;
+
+            if (!text) { alert("Please enter symptoms."); return; }
+            if (!age) { alert("Please enter your age first."); ageInput.focus(); return; }
+
+            const badWords = ["kill", "suicide", "bomb", "weapon"];
+            if(badWords.some(w => text.toLowerCase().includes(w))) {
+                addMessage("I cannot assist with that request. Please call emergency services.", 'ai');
+                return;
+            }
+
+            if(!navigator.onLine) {
+                msgQueue.push({text, age});
+                localStorage.setItem('offlineQueue', JSON.stringify(msgQueue));
+                addMessage(text, 'user');
+                addMessage("<i>You are offline. Message queued.</i>", 'ai');
+                return;
+            }
+
+            addMessage(`<strong>Age: ${age}</strong><br>${text}`, 'user');
+            userInput.value = '';
+            typingIndicator.classList.remove('hidden');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            try {
+                const prompt = `Act as a professional medical AI. Patient Age: ${age}. Symptoms: "${text}".
+                Language: ${lang === 'hi' ? 'Hindi' : (lang === 'te' ? 'Telugu' : 'English')}.
+                Provide: 1. Condition 2. Indian Generic Meds (Warning if Age < 12) 3. Home Remedies 4. Urgency (High/Med/Low).
+                Include 1 short medical source/reference at the end.`;
+
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [{ role: "user", content: prompt }],
+                        model: "llama-3.3-70b-versatile" 
+                    })
+                });
+
+                const data = await response.json();
+                const aiText = data.choices?.[0]?.message?.content || "I couldn't process that.";
+                let formattedText = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                
+                formattedText += checkInteractions(formattedText, text);
+                
+                let triageClass = "";
+                if(aiText.toLowerCase().includes("urgent") || aiText.toLowerCase().includes("emergency")) triageClass = "triage-high";
+                else if(aiText.toLowerCase().includes("consult doctor")) triageClass = "triage-med";
+                else triageClass = "triage-low";
+
+                addMessage(formattedText, 'ai', triageClass);
+                speakResponse(aiText);
+
+                let count = parseInt(document.getElementById('reqCount').innerText.replace(',','')) + 1;
+                document.getElementById('reqCount').innerText = count.toLocaleString();
+
+            } catch (error) {
+                addMessage("<b>Error:</b> Please check your internet connection.", 'ai');
+            } finally {
+                typingIndicator.classList.add('hidden');
+            }
+        }
+
+        function addMessage(text, sender, extraClass = "") {
+            const div = document.createElement('div');
+            if(sender === 'user' && isEncrypted) {
+                text = "<i class='fa-solid fa-lock text-xs'></i> " + text;
+            }
+            div.className = `chat-bubble ${sender === 'user' ? 'chat-user' : 'chat-ai'} ${extraClass}`;
+            div.innerHTML = text;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // --- 3. AI MEDICAL ANALYZER (VISION) ---
+        let currentMedMode = 'injury';
+
+        function setMedicalAnalyzerMode(mode) {
+            currentMedMode = mode;
+            const btnInjury = document.getElementById('btnMedInjury');
+            const btnRx = document.getElementById('btnMedRx');
+            
+            if (mode === 'injury') {
+                btnInjury.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-700 shadow-sm text-blue-600 transition";
+                btnRx.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition";
+                document.getElementById('medAnalyzeBtnText').innerText = "Analyze Injury";
+            } else {
+                btnRx.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-700 shadow-sm text-blue-600 transition";
+                btnInjury.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition";
+                document.getElementById('medAnalyzeBtnText').innerText = "Read Prescription";
+            }
+        }
+
+        document.getElementById('medImageInput').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                document.getElementById('medFileName').innerText = e.target.files[0].name;
+            }
+        });
+
+        async function analyzeMedicalImage() {
+            const fileInput = document.getElementById('medImageInput');
+            const age = document.getElementById('medAnalyzerAge').value;
+            const resultDiv = document.getElementById('medAnalysisResult');
+            const btn = document.getElementById('medAnalyzeBtn');
+
+            if (fileInput.files.length === 0) { alert("Please upload an image."); return; }
+            if (currentMedMode === 'injury' && !age) { alert("Please enter patient age."); return; }
+
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> AI is analyzing image...";
+            btn.disabled = true;
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onloadend = async function() {
+                const base64Image = reader.result;
+                let promptText = "";
+                
+                if (currentMedMode === 'injury') {
+                    promptText = `Analyze this image of a physical injury. The patient is ${age} years old. Suggest: 1. Type of injury. 2. First Aid steps. 3. Suggested generic medicine/ointment for ${age} year old (Indian Context). Warning: State this is not a doctor replacement.`;
+                } else {
+                    promptText = `Transcribe this doctor's prescription image. List the medicines mentioned and explain their usage in very simple layman terms.`;
+                }
+
+                try {
+                    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: [
+                                        { type: "text", text: promptText },
+                                        { type: "image_url", image_url: { url: base64Image } }
+                                    ]
+                                }
+                            ],
+                            model: "meta-llama/llama-4-scout-17b-16e-instruct" 
+                        })
+                    });
+
+                    const data = await response.json();
+                    if(data.error) throw new Error(data.error.message);
+                    
+                    const aiText = data.choices?.[0]?.message?.content || "Could not analyze image.";
+                    resultDiv.innerHTML = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+
+                } catch (error) {
+                    resultDiv.innerHTML = "<span class='text-red-500'>Error: " + error.message + "</span>";
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- 4. FOOD SAFETY CHECKER ---
+        async function checkFoodSafety() {
+            const foodName = document.getElementById('foodName').value.trim();
+            const btn = document.getElementById('foodBtn');
+            const resultDiv = document.getElementById('foodResult');
+            
+            if(!foodName) { alert("Please enter a food name."); return; }
+
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+            btn.disabled = true;
+            resultDiv.classList.add('hidden');
+
+            try {
+                const prompt = `Analyze the food item "${foodName}".
+                Return a strictly JSON format response with these 3 keys:
+                1. "cold": Is it safe during Cold/Fever? (Safe/Avoid)
+                2. "acidity": Is it safe for Acidity/Gastric? (Safe/Avoid)
+                3. "verdict": Overall Verdict (SAFE or AVOID).
+                Do not add any text outside JSON.`;
+
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [{ role: "user", content: prompt }],
+                        model: "llama-3.3-70b-versatile" 
+                    })
+                });
+
+                const data = await response.json();
+                const text = data.choices[0].message.content;
+                
+                let coldStatus = text.toLowerCase().includes("cold") && text.toLowerCase().includes("avoid") ? "Avoid" : "Safe";
+                let acidityStatus = text.toLowerCase().includes("acidity") && text.toLowerCase().includes("avoid") ? "Avoid" : "Safe";
+                let verdict = "SAFE";
+
+                try {
+                    const json = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
+                    coldStatus = json.cold;
+                    acidityStatus = json.acidity;
+                    verdict = json.verdict.toUpperCase();
+                } catch(e) {
+                    if(text.toLowerCase().includes("avoid")) verdict = "AVOID";
+                }
+
+                document.getElementById('coldText').innerText = coldStatus;
+                document.getElementById('coldText').className = coldStatus.toLowerCase().includes("safe") ? "text-green-600 font-bold" : "text-red-600 font-bold";
+                document.getElementById('acidityText').innerText = acidityStatus;
+                document.getElementById('acidityText').className = acidityStatus.toLowerCase().includes("safe") ? "text-green-600 font-bold" : "text-red-600 font-bold";
+
+                const verdictDiv = document.getElementById('finalVerdict');
+                verdictDiv.innerText = "VERDICT: " + verdict;
+                verdictDiv.className = verdict.includes("SAFE") 
+                    ? "text-center p-2 rounded-lg font-bold text-white text-sm bg-green-500 shadow-lg" 
+                    : "text-center p-2 rounded-lg font-bold text-white text-sm bg-red-500 shadow-lg";
+
+                resultDiv.classList.remove('hidden');
+
+            } catch(e) {
+                alert("Error analyzing food. Try again.");
+            } finally {
+                btn.innerHTML = 'Check Safety';
+                btn.disabled = false;
+            }
+        }
+
+        // --- 5. BMI CALCULATOR ---
+        function calculateBMI() {
+            const weight = parseFloat(document.getElementById('bmiWeight').value);
+            const height = parseFloat(document.getElementById('bmiHeight').value) / 100; // cm to m
+            const resultDiv = document.getElementById('bmiResult');
+
+            if (!weight || !height) { alert("Please enter valid weight and height."); return; }
+
+            const bmi = (weight / (height * height)).toFixed(1);
+            let category = "";
+            let colorClass = "";
+            let advice = "";
+
+            if (bmi < 18.5) {
+                category = "Underweight";
+                colorClass = "text-blue-500";
+                advice = "Eat more nutrient-rich foods.";
+            } else if (bmi < 24.9) {
+                category = "Normal Weight";
+                colorClass = "text-green-500";
+                advice = "Great job! Maintain balanced diet.";
+            } else if (bmi < 29.9) {
+                category = "Overweight";
+                colorClass = "text-orange-500";
+                advice = "Exercise daily and reduce sugar.";
+            } else {
+                category = "Obese";
+                colorClass = "text-red-500";
+                advice = "Consult a doctor for a diet plan.";
+            }
+
+            document.getElementById('bmiScore').innerText = bmi;
+            document.getElementById('bmiCategory').innerText = category;
+            document.getElementById('bmiCategory').className = `text-sm font-semibold mb-2 ${colorClass}`;
+            document.getElementById('bmiAdvice').innerText = advice;
+            
+            resultDiv.classList.remove('hidden');
+        }
+
+        // --- 6. MENTAL WELLNESS AI ---
+        async function checkMentalHealth() {
+            const input = document.getElementById('mentalInput').value;
+            const output = document.getElementById('mentalResult');
+            const btn = document.getElementById('mentalBtn');
+
+            if(!input) return alert("Please share how you feel.");
+
+            output.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> AI is thinking...";
+            output.classList.remove('hidden');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [{ 
+                            role: "user", 
+                            content: `Act as a compassionate mental health companion. User says: "${input}". Provide short, comforting advice and 2 simple actionable steps. Keep it under 50 words.` 
+                        }],
+                        model: "llama-3.3-70b-versatile" 
+                    })
+                });
+
+                const data = await response.json();
+                output.innerText = data.choices?.[0]?.message?.content || "I am here for you.";
+            } catch (e) {
+                output.innerText = "Error connecting. Try again.";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // --- AI TERM SIMPLIFIER ---
+        async function simplifyTermWithAI() {
+            const term = document.getElementById('complexTerm').value.trim();
+            const output = document.getElementById('simpleOutput');
+            const btn = document.getElementById('simplifyBtn');
+            
+            if(!term) { output.innerText = "Please enter a term first."; return; }
+
+            output.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Simplifying...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [{ 
+                            role: "user", 
+                            content: `Explain the medical term "${term}" in very simple, easy-to-understand language for a layman in 1-2 sentences. Do not use complex jargon.` 
+                        }],
+                        model: "llama-3.3-70b-versatile" 
+                    })
+                });
+
+                const data = await response.json();
+                output.innerText = data.choices?.[0]?.message?.content || "Could not simplify.";
+            } catch (e) {
+                output.innerText = "Error connecting to AI. Try again.";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // --- FIRST AID ---
+        const firstAidData = {
+            burns: "<strong><i class='fa-solid fa-fire text-orange-500'></i> Burns:</strong><br>1. Hold under cool running water (10-15 mins).<br>2. Remove tight rings/watches.<br>3. Apply Aloe Vera or Burnol. Do not burst blisters.",
+            cuts: "<strong><i class='fa-solid fa-band-aid text-blue-500'></i> Cuts/Bleeding:</strong><br>1. Apply firm pressure with clean cloth.<br>2. Elevate the wound.<br>3. Clean with Dettol/water once bleeding stops.",
+            faint: "<strong><i class='fa-solid fa-person-falling text-purple-500'></i> Fainting:</strong><br>1. Lie patient on back, raise legs.<br>2. Loosen tight clothing.<br>3. Do not crowd them, ensure fresh air.",
+            choke: "<strong><i class='fa-solid fa-hands-holding-circle text-green-500'></i> Choking:</strong><br>1. Encourage coughing.<br>2. Give 5 sharp back blows between shoulder blades.<br>3. Perform Heimlich maneuver if needed."
+        };
+
+        function showFirstAid(type) {
+            const content = document.getElementById('firstAidContent');
+            content.innerHTML = firstAidData[type];
+        }
+
+        // --- GEOLOCATION ---
+        function locateHospital() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    window.open(`https://www.google.com/maps/search/hospital/@${position.coords.latitude},${position.coords.longitude},14z`, '_blank');
+                }, () => alert("Location permission denied."));
+            } else {
+                alert("Geolocation not supported.");
+            }
+        }
+
+        // --- 7. CONSENT MODAL LOGIC ---
+        function checkConsent() {
+            if (!localStorage.getItem('healthConsent')) {
+                document.getElementById('consentModal').classList.remove('hidden');
+            } else {
+                startOnboarding();
+            }
+        }
+        function acceptConsent(agree) {
+            document.getElementById('consentModal').classList.add('hidden');
+            localStorage.setItem('healthConsent', agree ? 'true' : 'false');
+            startOnboarding();
+        }
+        window.onload = checkConsent;
+
+        // --- 8. ONBOARDING TOUR ---
+        function startOnboarding() {
+            if(localStorage.getItem('tourSeen')) return;
+            const driver = window.driver.js.driver;
+            const driverObj = driver({
+                showProgress: true,
+                steps: [
+                    { element: '#diagnosis', popover: { title: 'AI Diagnosis', description: 'Enter age & symptoms here to get instant advice.' } },
+                    { element: '#tools', popover: { title: 'Smart Tools', description: 'Upload X-rays, check food safety, or calculate BMI.' } },
+                    { element: '.sos-btn', popover: { title: 'Emergency', description: 'Click this anytime to find the nearest hospital.' } }
+                ]
+            });
+            driverObj.drive();
+            localStorage.setItem('tourSeen', 'true');
+        }
+
+        // --- 9. PRIVACY & ENCRYPTION ---
+        let isEncrypted = false;
+        function toggleEncryption() {
+            const btn = document.getElementById('encryptBtn');
+            if(!isEncrypted) {
+                const pin = prompt("Set a 4-digit PIN for this session:");
+                if(pin && pin.length === 4) {
+                    isEncrypted = true;
+                    btn.innerText = "ON";
+                    btn.classList.replace('text-red-500', 'text-green-500');
+                    document.getElementById('pinStatus').classList.remove('hidden');
+                }
+            } else {
+                isEncrypted = false;
+                btn.innerText = "OFF";
+                btn.classList.replace('text-green-500', 'text-red-500');
+                document.getElementById('pinStatus').classList.add('hidden');
+            }
+        }
+
+        // --- 10. TELEMEDICINE (JITSI INTEGRATION) ---
+        let jitsiApi = null;
+
+        function toggleTelemed(show) {
+            const modal = document.getElementById('telemedModal');
+            const lobby = document.getElementById('telemedLobby');
+            const videoArea = document.getElementById('telemedVideoArea');
+            
+            if (show) {
+                modal.classList.remove('hidden');
+                // Reset to lobby
+                lobby.classList.remove('hidden');
+                videoArea.classList.add('hidden');
+            } else {
+                modal.classList.add('hidden');
+                // Hangup if active
+                if (jitsiApi) {
+                    jitsiApi.dispose();
+                    jitsiApi = null;
+                }
+                document.getElementById('jitsi-container').innerHTML = "";
+            }
+        }
+
+        function generateRoomCode() {
+            // Generate a random 6-character code
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('teleRoomCode').value = code;
+        }
+
+        function startVideoCall(mode) {
+            const name = document.getElementById('teleName').value.trim();
+            let code = document.getElementById('teleRoomCode').value.trim().toUpperCase();
+
+            if (!name) return alert("Please enter your name.");
+            
+            if (mode === 'create' && !code) {
+                // If creating and no code, generate one
+                generateRoomCode();
+                code = document.getElementById('teleRoomCode').value;
+            }
+            
+            if (!code) return alert("Please enter a Room Code.");
+
+            // Switch UI
+            document.getElementById('telemedLobby').classList.add('hidden');
+            document.getElementById('telemedVideoArea').classList.remove('hidden');
+
+            // Initialize Jitsi Meet
+            const domain = 'meet.jit.si';
+            const options = {
+                roomName: 'HealthAssistAI_' + code, // Prefix ensures unique namespace
+                width: '100%',
+                height: '100%',
+                parentNode: document.querySelector('#jitsi-container'),
+                userInfo: {
+                    displayName: name
+                },
+                configOverwrite: { 
+                    startWithAudioMuted: false, 
+                    startWithVideoMuted: false,
+                    prejoinPageEnabled: false // Skip Jitsi prejoin screen
+                },
+                interfaceConfigOverwrite: {
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone'
+                    ],
+                }
+            };
+
+            jitsiApi = new JitsiMeetExternalAPI(domain, options);
+
+            // Handle Hangup Event
+            jitsiApi.addEventListeners({
+                videoConferenceLeft: function () {
+                    toggleTelemed(false);
+                }
+            });
+        }
+
+        // --- 11. DOWNLOAD CHAT ---
+        function downloadChat() {
+            const chats = document.querySelectorAll('.chat-bubble');
+            let content = "HEALTH ASSIST REPORT\n\n";
+            chats.forEach(c => {
+                content += c.innerText + "\n----------------\n";
+            });
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'HealthReport.txt';
+            a.click();
+        }
+    </script>
+</body>
+</html>
